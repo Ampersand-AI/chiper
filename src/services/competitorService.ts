@@ -1,3 +1,4 @@
+
 import { Competitor, Insight, ScrapeTarget, ApiSource, ScraperCode, InsightAnalysis, InsightReport } from '@/types/competitors';
 import { toast } from '@/hooks/use-toast';
 
@@ -391,6 +392,11 @@ class CompetitorService {
   }
 
   async getScrapeTargets(): Promise<ScrapeTarget[]> {
+    // Return mock data if no targets exist yet
+    if (this.scrapeTargets.length === 0) {
+      // Initialize with empty array - we'll add targets through the UI
+      this.scrapeTargets = [];
+    }
     return this.scrapeTargets;
   }
 
@@ -457,7 +463,7 @@ class CompetitorService {
     
     toast({
       title: "Custom Scraper Created",
-      description: `Scraper for ${scraperCode.url} has been created`,
+      description: `Scraper for ${scraperCode.url} has been created using DeepSeek Coder AI`,
     });
     
     return newScraperCode;

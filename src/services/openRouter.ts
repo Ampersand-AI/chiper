@@ -18,6 +18,8 @@ export async function queryOpenRouter(model: string, messages: Message[], apiKey
       throw new Error('No OpenRouter API key provided');
     }
 
+    console.log(`Calling OpenRouter with model: ${model}`);
+    
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -41,7 +43,7 @@ export async function queryOpenRouter(model: string, messages: Message[], apiKey
     return data.choices[0]?.message?.content || "No response";
   } catch (error) {
     console.error('Error calling OpenRouter API:', error);
-    return "An error occurred while processing your request.";
+    throw error; // Re-throw to allow proper error handling
   }
 }
 
