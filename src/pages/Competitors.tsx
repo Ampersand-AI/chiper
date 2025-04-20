@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { competitorService } from '@/services/api';
+import { competitorService } from '@/services/competitorService';
 import { toast } from '@/hooks/use-toast';
+import { Competitor } from '@/types/competitors';
 
 const Competitors = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,10 +38,10 @@ const Competitors = () => {
         description: "Competitor added successfully",
       });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to add competitor",
+        description: error instanceof Error ? error.message : "Failed to add competitor",
         variant: "destructive",
       });
     },
@@ -151,7 +152,7 @@ const Competitors = () => {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCompetitors.map(competitor => (
+          {filteredCompetitors.map((competitor: Competitor) => (
             <CompetitorCard
               key={competitor.id}
               competitor={{

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScraperService } from '@/services/scraperService';
 import { toast } from '@/hooks/use-toast';
+import { ScraperConfig } from '@/types/competitors';
 
 const Settings = () => {
   const [openaiKey, setOpenaiKey] = useState('');
@@ -16,16 +17,32 @@ const Settings = () => {
   const [newsApiKey, setNewsApiKey] = useState('');
   const [enableScraper, setEnableScraper] = useState(true);
   const [testing, setTesting] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load saved config on component mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const config = await ScraperService.getConfig();
+        if (config.openaiKey) setOpenaiKey(config.openaiKey);
+        if (config.openrouterKey) setOpenrouterKey(config.openrouterKey);
+        if (config.newsApiKey) setNewsApiKey(config.newsApiKey);
+        setEnableScraper(config.enabled);
+        setLoading(false);
+      } catch (error) {
+        console.error("Failed to load config:", error);
+        setLoading(false);
+      }
+    };
+    
+    loadConfig();
+  }, []);
 
   const testApiKey = async (key: string, type: 'openai' | 'openrouter' | 'newsapi') => {
     setTesting(true);
     try {
       const success = await ScraperService.testApiKey(key, type);
       if (success) {
-        // Store the key in local storage for demo purposes
-        // In a real app, this would be stored securely
-        localStorage.setItem(`${type}Key`, key);
-        
         toast({
           title: "API Key Saved",
           description: `Your ${type === 'openai' ? 'OpenAI' : type === 'openrouter' ? 'OpenRouter' : 'NewsAPI'} key has been saved.`,

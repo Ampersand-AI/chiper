@@ -14,13 +14,17 @@ interface OpenRouterResponse {
 
 export async function queryOpenRouter(model: string, messages: Message[], apiKey?: string): Promise<string> {
   try {
-    const key = apiKey || 'YOUR_OPENROUTER_API_KEY'; // In production, get this from secure storage
+    if (!apiKey || apiKey === 'YOUR_OPENROUTER_API_KEY') {
+      throw new Error('No OpenRouter API key provided');
+    }
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${key}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.href, // Required by OpenRouter
+        'X-Title': 'Competitive Intelligence Scraper', // Optional but helpful
       },
       body: JSON.stringify({
         model,
@@ -29,7 +33,8 @@ export async function queryOpenRouter(model: string, messages: Message[], apiKey
     });
 
     if (!response.ok) {
-      throw new Error(`OpenRouter API returned ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API returned ${response.status}: ${errorText}`);
     }
 
     const data = await response.json() as OpenRouterResponse;

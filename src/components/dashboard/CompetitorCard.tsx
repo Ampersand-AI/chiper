@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Competitor } from '@/data/mockData';
+import { Competitor } from '@/types/competitors';
 import { Button } from '@/components/ui/button';
 
 interface CompetitorCardProps {
@@ -66,7 +66,7 @@ export function CompetitorCard({ competitor, insightCount }: CompetitorCardProps
       </CardContent>
       <CardFooter className="pt-2 flex justify-between items-center">
         <div className="text-xs text-muted-foreground">
-          Last updated: {competitor.lastUpdated}
+          Last updated: {new Date(competitor.lastUpdated).toLocaleDateString()}
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link to={`/competitors/${competitor.id}`} className="flex items-center">
