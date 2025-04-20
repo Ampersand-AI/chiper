@@ -1,23 +1,48 @@
-
 import { ApiSource, Insight, InsightAnalysis, InsightReport, ScraperCode } from "@/types/competitors";
 import { getInsights, extractStructuredData, generateScraper, analyzeCompetitorStrategy, formatInsightReport } from "./openRouter";
 
 export class ScraperService {
-  // Store configuration in localStorage
-  private static getConfig() {
+  private static getConfigFromStorage() {
     const config = localStorage.getItem('scraperConfig');
     return config ? JSON.parse(config) : {};
   }
 
-  static async setConfig(newConfig: {openrouterKey?: string, newsApiKey?: string}) {
-    const currentConfig = this.getConfig();
+  static async setConfig(newConfig: {openrouterKey?: string, openaiKey?: string, newsApiKey?: string}) {
+    const currentConfig = this.getConfigFromStorage();
     const updatedConfig = { ...currentConfig, ...newConfig };
     localStorage.setItem('scraperConfig', JSON.stringify(updatedConfig));
     return updatedConfig;
   }
 
-  static async getConfig() {
-    return this.getConfig();
+  static getConfig() {
+    return this.getConfigFromStorage();
+  }
+
+  static async testApiKey(key: string, type: 'openai' | 'openrouter' | 'newsapi'): Promise<boolean> {
+    try {
+      switch (type) {
+        case 'openrouter':
+          // Test with a simple Claude query
+          const response = await getInsights("Test message", key);
+          return response.length > 0;
+          
+        case 'newsapi':
+          const newsResponse = await fetch(`https://newsapi.org/v2/everything?q=test&apiKey=${key}`);
+          return newsResponse.ok;
+          
+        case 'openai':
+          const openaiResponse = await fetch('https://api.openai.com/v1/models', {
+            headers: { 'Authorization': `Bearer ${key}` }
+          });
+          return openaiResponse.ok;
+          
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error(`Error testing ${type} API key:`, error);
+      return false;
+    }
   }
 
   // Generate insights from API sources
