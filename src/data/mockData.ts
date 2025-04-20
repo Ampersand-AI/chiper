@@ -1,4 +1,3 @@
-
 // Mock data for the demo
 import { getRandomNumber, generateChartData } from '@/lib/utils';
 

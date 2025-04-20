@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Edit, ExternalLink, LineChart, MapPin, RefreshCw, Settings, Share2, Trash } from 'lucide-react';
-import { mockCompetitors, mockInsights, generateChartData, mockScrapeTargets } from '@/data/mockData';
+import { mockCompetitors, mockInsights, mockScrapeTargets } from '@/data/mockData';
+import { generateChartData } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const CompetitorDetail = () => {

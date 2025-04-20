@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -10,42 +9,43 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowDownUp, Calendar, Eye, Play, Plus, RefreshCw, Search, Settings, SquarePause, Trash } from 'lucide-react';
+import { ArrowDownUp, Calendar, CirclePause, Eye, Play, Plus, RefreshCw, Search, Settings, Trash } from 'lucide-react';
 import { mockCompetitors, mockScrapeTargets } from '@/data/mockData';
 
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'bg-green-100 text-green-800 hover:bg-green-200';
+    case 'paused':
+      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+    case 'error':
+      return 'bg-red-100 text-red-800 hover:bg-red-200';
+    default:
+      return '';
+  }
+};
+
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case 'website':
+      return '🌐';
+    case 'linkedin':
+      return '👥';
+    case 'news':
+      return '📰';
+    case 'jobs':
+      return '💼';
+    default:
+      return '📄';
+  }
+};
+
+const getCompetitorName = (id: number) => {
+  return mockCompetitors.find(c => c.id === id)?.name || 'Unknown';
+};
+
 const Scraper = () => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 hover:bg-green-200';
-      case 'paused':
-        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
-      case 'error':
-        return 'bg-red-100 text-red-800 hover:bg-red-200';
-      default:
-        return '';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'website':
-        return '🌐';
-      case 'linkedin':
-        return '👥';
-      case 'news':
-        return '📰';
-      case 'jobs':
-        return '💼';
-      default:
-        return '📄';
-    }
-  };
-
-  const getCompetitorName = (id: number) => {
-    return mockCompetitors.find(c => c.id === id)?.name || 'Unknown';
-  };
-
+  
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-6">
@@ -221,7 +221,7 @@ const Scraper = () => {
                         </Button>
                         {target.status === 'active' ? (
                           <Button variant="ghost" size="icon" title="Pause">
-                            <SquarePause className="h-4 w-4" />
+                            <CirclePause className="h-4 w-4" />
                           </Button>
                         ) : (
                           <Button variant="ghost" size="icon" title="Activate">
