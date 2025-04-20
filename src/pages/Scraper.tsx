@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -837,4 +838,188 @@ const Scraper = () => {
                               <h3 className="font-medium">{insight.title}</h3>
                               <p className="text-sm text-muted-foreground mt-1">{insight.description}</p>
                             </div>
-                            <Badge className={insight.sentiment === 'positive' ? 'bg-green-100 text-green-800' :
+                            <Badge className={
+                              insight.sentiment === 'positive' ? 'bg-green-100 text-green-800' : 
+                              insight.sentiment === 'negative' ? 'bg-red-100 text-red-800' : 
+                              'bg-slate-100 text-slate-800'
+                            }>
+                              {insight.sentiment.charAt(0).toUpperCase() + insight.sentiment.slice(1)}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 border rounded-md bg-muted/30 text-center">
+                  <p className="text-muted-foreground">No reports generated yet. Run a scraper to collect insights.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* API Details Dialog */}
+      <Dialog open={isApiDetailsOpen} onOpenChange={setIsApiDetailsOpen}>
+        <DialogContent className="max-w-3xl">
+          {selectedApiSource && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedApiSource.title}</DialogTitle>
+                <DialogDescription>
+                  {selectedApiSource.description}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Category</Label>
+                  <div className="col-span-3">
+                    <Badge className={getCategoryColor(selectedApiSource.category)}>
+                      {selectedApiSource.category.charAt(0).toUpperCase() + selectedApiSource.category.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">API URL</Label>
+                  <div className="col-span-3 font-mono text-sm bg-muted p-2 rounded">
+                    {selectedApiSource.api_url || selectedApiSource.rss_url}
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Method</Label>
+                  <div className="col-span-3">
+                    {selectedApiSource.method}
+                  </div>
+                </div>
+                {selectedApiSource.params && (
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right">Parameters</Label>
+                    <div className="col-span-3">
+                      <div className="bg-muted p-3 rounded font-mono text-sm whitespace-pre">
+                        {JSON.stringify(selectedApiSource.params, null, 2)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button onClick={() => openRunScraperDialog(selectedApiSource)}>
+                  Run Scraper
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Run Scraper Dialog */}
+      <Dialog open={isRunScraperOpen} onOpenChange={setIsRunScraperOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Run Scraper</DialogTitle>
+            <DialogDescription>
+              Select a competitor to collect data for
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="competitor-select">Competitor</Label>
+              <Select 
+                value={selectedCompetitorId ? String(selectedCompetitorId) : ''} 
+                onValueChange={(value) => setSelectedCompetitorId(Number(value))}
+              >
+                <SelectTrigger id="competitor-select">
+                  <SelectValue placeholder="Select competitor" />
+                </SelectTrigger>
+                <SelectContent position="popper" className="bg-background">
+                  {competitors.map(competitor => (
+                    <SelectItem key={competitor.id} value={competitor.id.toString()}>
+                      {competitor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedApiSource && (
+              <div className="p-3 border rounded-md bg-muted/50">
+                <h4 className="font-medium">Selected Data Source</h4>
+                <p className="text-sm text-muted-foreground mt-1">{selectedApiSource.title}</p>
+                <div className="flex items-center gap-1 mt-2">
+                  <Badge className={getCategoryColor(selectedApiSource.category)}>
+                    {selectedApiSource.category}
+                  </Badge>
+                  {selectedApiSource.requiresKey && (
+                    <Badge variant="outline">Requires API Key</Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              disabled={!selectedCompetitorId || isProcessing}
+              onClick={runScraper}
+            >
+              {isProcessing ? "Processing..." : "Run Now"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Custom Scraper Dialog */}
+      <Dialog open={isGenerateReportOpen} onOpenChange={setIsGenerateReportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Custom Scraper</DialogTitle>
+            <DialogDescription>
+              Create a custom scraper for a competitor's website using AI
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="competitor-select-gen">Competitor</Label>
+              <Select 
+                value={selectedCompetitorId ? String(selectedCompetitorId) : ''} 
+                onValueChange={(value) => setSelectedCompetitorId(Number(value))}
+              >
+                <SelectTrigger id="competitor-select-gen">
+                  <SelectValue placeholder="Select competitor" />
+                </SelectTrigger>
+                <SelectContent position="popper" className="bg-background">
+                  {competitors.map(competitor => (
+                    <SelectItem key={competitor.id} value={competitor.id.toString()}>
+                      {competitor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="p-3 border rounded-md bg-amber-50">
+              <div className="flex items-start gap-2">
+                <Code className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-amber-800">AI-Powered Code Generation</h4>
+                  <p className="text-sm text-amber-700 mt-1">
+                    This will use DeepSeek Coder AI to generate custom scraping code for the selected competitor's website. The process may take a minute.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              disabled={!selectedCompetitorId || isProcessing}
+              onClick={generateScraperCode}
+            >
+              {isProcessing ? "Generating..." : "Generate Code"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
+};
+
+export default Scraper;
