@@ -1,3 +1,4 @@
+
 import { ApiSource, Insight, InsightAnalysis, InsightReport, ScraperCode } from "@/types/competitors";
 import { getInsights, extractStructuredData, generateScraper, analyzeCompetitorStrategy, formatInsightReport } from "./openRouter";
 
@@ -85,9 +86,13 @@ export class ScraperService {
             source: apiSource.title,
             sourceUrl: apiSource.api_url || apiSource.rss_url || '',
             sourceType: apiSource.category,
-            sentiment: ['positive', 'neutral', 'negative'][Math.floor(Math.random() * 3)],
+            sentiment: ['positive', 'neutral', 'negative'][Math.floor(Math.random() * 3)] as 'positive' | 'neutral' | 'negative',
             date: new Date().toISOString(),
-            fullContent: analysis,
+            // Add required fields from Insight type
+            type: 'news' as 'product' | 'hiring' | 'expansion' | 'pricing' | 'news' | 'patent' | 'financial' | 'social' | 'opensource',
+            impact: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)] as 'high' | 'medium' | 'low',
+            // Store the full content as raw data
+            rawData: { fullContent: analysis }
           };
         })
       );
@@ -113,20 +118,26 @@ export class ScraperService {
 
       // Combine all insights into a single document for analysis
       const insightsText = insights
-        .map(insight => `Source: ${insight.source}\nTitle: ${insight.title}\nDescription: ${insight.description}\nFull Content: ${insight.fullContent}\n`)
+        .map(insight => `Source: ${insight.source}\nTitle: ${insight.title}\nDescription: ${insight.description}\nFull Content: ${insight.rawData?.fullContent || ''}\n`)
         .join('\n---\n');
 
       // Use Claude to analyze the insights
-      const analysis = await analyzeCompetitorStrategy(
+      const analysisText = await analyzeCompetitorStrategy(
         `Insights about ${competitorName}:\n\n${insightsText}`,
         config.openrouterKey
       );
 
+      // Create an analysis object that matches the InsightAnalysis type
       return {
-        competitorName,
-        analysis,
-        timestamp: new Date().toISOString(),
-        insightCount: insights.length,
+        id: Date.now(),
+        insightId: insights[0]?.id || 0,
+        summary: analysisText,
+        productStrategy: extractRelevantSection(analysisText, "Product Strategy"),
+        marketPositioning: extractRelevantSection(analysisText, "Market Positioning"),
+        gaps: extractRelevantSection(analysisText, "Gaps"),
+        threatLevel: determineLevel(analysisText) as 'high' | 'medium' | 'low',
+        opportunities: extractRelevantSection(analysisText, "Opportunities"),
+        createdAt: new Date().toISOString()
       };
     } catch (error) {
       console.error("Error analyzing insights:", error);
@@ -150,7 +161,7 @@ export class ScraperService {
 
       // Use GPT-4 to format the report
       const formattedReport = await formatInsightReport(
-        analysis.analysis,
+        analysis.summary,
         config.openrouterKey
       );
 
@@ -177,12 +188,11 @@ export class ScraperService {
         'medium';
 
       return {
-        id: Date.now(),
         competitorId,
         competitorName,
         overview: overviewMatch ? overviewMatch[1].trim() : "No overview available",
         keyMoves: parseSection(keyMovesMatch ? keyMovesMatch[1] : null),
-        threatLevel,
+        threatLevel: threatLevel as 'high' | 'medium' | 'low',
         opportunities: parseSection(opportunitiesMatch ? opportunitiesMatch[1] : null),
         insights: insights.slice(0, 5), // Include the top 5 insights
         lastUpdated: new Date().toISOString(),
@@ -212,16 +222,15 @@ export class ScraperService {
         throw new Error("Failed to generate scraper code");
       }
 
-      // Create a scraper code object
+      // Create a scraper code object matching the ScraperCode type
       return {
         id: Date.now(),
-        name: `${competitorName} Custom Scraper`,
-        language: "javascript",
-        framework: "puppeteer",
-        code,
-        targetUrl: url,
+        competitorId: 0, // This will be assigned by the calling code
+        url: url,
+        code: code,
         createdAt: new Date().toISOString(),
-        lastRun: null,
+        updatedAt: new Date().toISOString(),
+        status: 'active' as 'active' | 'paused' | 'error'
       };
     } catch (error) {
       console.error("Error generating custom scraper:", error);
@@ -284,7 +293,7 @@ export class ScraperService {
         }
       ], config.openrouterKey);
 
-      // Create insights from the analysis
+      // Create insights from the analysis that match the Insight type
       const insights: Insight[] = mockKaggleDatasets.map((dataset, index) => ({
         id: Date.now() + index,
         competitorId,
@@ -293,9 +302,13 @@ export class ScraperService {
         source: "Kaggle",
         sourceUrl: dataset.url,
         sourceType: "datasets",
-        sentiment: dataset.creator.includes(competitorName) ? "positive" : "neutral",
+        sentiment: dataset.creator.includes(competitorName) ? "positive" as 'positive' : "neutral" as 'neutral',
         date: new Date().toISOString(),
-        fullContent: analysis,
+        // Required fields from Insight type
+        type: 'opensource' as 'product' | 'hiring' | 'expansion' | 'pricing' | 'news' | 'patent' | 'financial' | 'social' | 'opensource',
+        impact: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)] as 'high' | 'medium' | 'low',
+        // Store the full content as raw data
+        rawData: { fullContent: analysis }
       }));
 
       return insights;
@@ -333,5 +346,25 @@ async function queryOpenRouter(model: string, messages: { role: string; content:
   } catch (error) {
     console.error('Error calling OpenRouter API:', error);
     throw error;
+  }
+}
+
+// Helper function to extract sections from the analysis text
+function extractRelevantSection(text: string, sectionName: string): string | undefined {
+  const sectionRegex = new RegExp(`## ${sectionName}\\s+([\\s\\S]*?)(?=##|$)`, 'i');
+  const match = text.match(sectionRegex);
+  return match ? match[1].trim() : undefined;
+}
+
+// Helper function to determine threat level from analysis text
+function determineLevel(text: string): string {
+  const lowercaseText = text.toLowerCase();
+  if (lowercaseText.includes('high threat') || lowercaseText.includes('severe') || 
+      lowercaseText.includes('critical') || lowercaseText.includes('major threat')) {
+    return 'high';
+  } else if (lowercaseText.includes('medium threat') || lowercaseText.includes('moderate')) {
+    return 'medium';
+  } else {
+    return 'low';
   }
 }

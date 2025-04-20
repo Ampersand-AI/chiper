@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -15,6 +14,8 @@ import { toast } from '@/hooks/use-toast';
 import { Competitor } from '@/types/competitors';
 
 const Competitors = () => {
+  // ... keep existing code (state, queries, mutation setup)
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -87,6 +88,7 @@ const Competitors = () => {
   };
 
   return (
+    // ... keep existing code (MainLayout and top section)
     <MainLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -167,7 +169,6 @@ const Competitors = () => {
                 logo: competitor.logo || '/placeholder.svg' // Ensure logo is provided
               }}
               insightCount={getInsightCount(competitor.id)}
-              onViewDetails={() => handleViewDetails(competitor.id)}
             />
           ))}
         </div>

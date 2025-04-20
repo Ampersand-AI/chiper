@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/button';
 interface CompetitorCardProps {
   competitor: Competitor;
   insightCount: number;
+  onViewDetails?: () => void;  // Make this prop optional
 }
 
-export function CompetitorCard({ competitor, insightCount }: CompetitorCardProps) {
+export function CompetitorCard({ competitor, insightCount, onViewDetails }: CompetitorCardProps) {
   const sentimentColor = 
     competitor.sentimentScore >= 75 ? 'bg-green-100 text-green-800' :
     competitor.sentimentScore >= 50 ? 'bg-yellow-100 text-yellow-800' :
@@ -68,7 +69,7 @@ export function CompetitorCard({ competitor, insightCount }: CompetitorCardProps
         <div className="text-xs text-muted-foreground">
           Last updated: {new Date(competitor.lastUpdated).toLocaleDateString()}
         </div>
-        <Button variant="ghost" size="sm" asChild>
+        <Button variant="ghost" size="sm" asChild onClick={onViewDetails}>
           <Link to={`/competitors/${competitor.id}`} className="flex items-center">
             View details
             <ArrowUpRight className="ml-1 h-3 w-3" />
