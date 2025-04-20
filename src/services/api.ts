@@ -1,4 +1,3 @@
-
 import { Competitor, Insight, ScrapeTarget } from '@/types/competitors';
 
 // This would be replaced with real API calls once connected to a backend
@@ -13,6 +12,7 @@ export class CompetitorService {
       id: Math.floor(Math.random() * 10000),
       lastUpdated: new Date().toISOString(),
       sentimentScore: 50,
+      logo: '/placeholder.svg', // Adding default logo
     };
     this.competitors.push(newCompetitor);
     return newCompetitor;
@@ -42,11 +42,11 @@ export class CompetitorService {
       : this.insights;
   }
 
-  async addScrapeTarget(target: Omit<ScrapeTarget, 'id'>): Promise<ScrapeTarget> {
-    const newTarget = {
+  async addScrapeTarget(target: Omit<ScrapeTarget, 'id' | 'status' | 'lastScraped' | 'nextScheduled'>): Promise<ScrapeTarget> {
+    const newTarget: ScrapeTarget = {
       ...target,
       id: Math.floor(Math.random() * 10000),
-      status: 'active',
+      status: 'active' as const, // Using a const assertion to ensure type safety
       lastScraped: null,
       nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     };

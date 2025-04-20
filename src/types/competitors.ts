@@ -3,6 +3,7 @@ export interface Competitor {
   id: number;
   name: string;
   website: string;
+  logo?: string; // Making this optional
   description: string;
   industryPositioning: string;
   sentimentScore: number;

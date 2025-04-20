@@ -154,7 +154,10 @@ const Competitors = () => {
           {filteredCompetitors.map(competitor => (
             <CompetitorCard
               key={competitor.id}
-              competitor={competitor}
+              competitor={{
+                ...competitor,
+                logo: competitor.logo || '/placeholder.svg' // Ensure logo is provided
+              }}
               insightCount={getInsightCount(competitor.id)}
             />
           ))}
