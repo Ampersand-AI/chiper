@@ -5,29 +5,73 @@ import { CompetitorCard } from '@/components/dashboard/CompetitorCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
-import { mockCompetitors, mockInsights } from '@/data/mockData';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { competitorService } from '@/services/api';
+import { toast } from '@/hooks/use-toast';
 
 const Competitors = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: competitors = [], isLoading } = useQuery({
+    queryKey: ['competitors'],
+    queryFn: () => competitorService.getCompetitors(),
+  });
+
+  const { data: insights = [] } = useQuery({
+    queryKey: ['insights'],
+    queryFn: () => competitorService.getInsights(),
+  });
+
+  const addCompetitorMutation = useMutation({
+    mutationFn: (data: any) => competitorService.addCompetitor(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      setIsOpen(false);
+      toast({
+        title: "Success",
+        description: "Competitor added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add competitor",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get('name') as string,
+      website: formData.get('website') as string,
+      description: formData.get('description') as string,
+      industryPositioning: formData.get('positioning') as string,
+    };
+    addCompetitorMutation.mutate(data);
+  };
 
   // Filter competitors by search query
-  const filteredCompetitors = mockCompetitors.filter(
+  const filteredCompetitors = competitors.filter(
     competitor => 
       competitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       competitor.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       competitor.industryPositioning.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Count insights per competitor
+  // Count insights per competitor from last 60 days
   const getInsightCount = (competitorId: number) => {
-    // Count insights from last 60 days
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     
-    return mockInsights.filter(
+    return insights.filter(
       insight => 
         insight.competitorId === competitorId && 
         new Date(insight.date) >= sixtyDaysAgo
@@ -43,7 +87,7 @@ const Competitors = () => {
             View and manage your tracked competitors
           </p>
         </div>
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -51,33 +95,37 @@ const Competitors = () => {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Competitor</DialogTitle>
-              <DialogDescription>
-                Enter details about the competitor you want to track
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Competitor Name</Label>
-                <Input id="name" placeholder="e.g. Acme Inc." />
+            <form onSubmit={handleSubmit}>
+              <DialogHeader>
+                <DialogTitle>Add New Competitor</DialogTitle>
+                <DialogDescription>
+                  Enter details about the competitor you want to track
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Competitor Name</Label>
+                  <Input id="name" name="name" placeholder="e.g. Acme Inc." required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="website">Website URL</Label>
+                  <Input id="website" name="website" placeholder="e.g. https://www.acme.com" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="positioning">Market Positioning</Label>
+                  <Input id="positioning" name="positioning" placeholder="e.g. Enterprise SaaS" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" name="description" placeholder="Brief description of the competitor" required />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="website">Website URL</Label>
-                <Input id="website" placeholder="e.g. https://www.acme.com" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="positioning">Market Positioning</Label>
-                <Input id="positioning" placeholder="e.g. Enterprise SaaS" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="Brief description of the competitor" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Add Competitor</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="submit" disabled={addCompetitorMutation.isPending}>
+                  {addCompetitorMutation.isPending ? "Adding..." : "Add Competitor"}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -95,17 +143,25 @@ const Competitors = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredCompetitors.map(competitor => (
-          <CompetitorCard
-            key={competitor.id}
-            competitor={competitor}
-            insightCount={getInsightCount(competitor.id)}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-[200px] rounded-lg border bg-card animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredCompetitors.map(competitor => (
+            <CompetitorCard
+              key={competitor.id}
+              competitor={competitor}
+              insightCount={getInsightCount(competitor.id)}
+            />
+          ))}
+        </div>
+      )}
 
-      {filteredCompetitors.length === 0 && (
+      {filteredCompetitors.length === 0 && !isLoading && (
         <div className="mt-12 flex flex-col items-center justify-center text-center">
           <div className="mb-4 rounded-full bg-muted p-3">
             <Search className="h-6 w-6 text-muted-foreground" />

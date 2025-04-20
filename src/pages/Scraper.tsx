@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowDownUp, Calendar, CirclePause, Eye, Play, Plus, RefreshCw, Search, Settings, Trash } from 'lucide-react';
-import { mockCompetitors, mockScrapeTargets } from '@/data/mockData';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { competitorService } from '@/services/api';
+import { toast } from '@/hooks/use-toast';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -40,12 +42,79 @@ const getTypeIcon = (type: string) => {
   }
 };
 
-const getCompetitorName = (id: number) => {
-  return mockCompetitors.find(c => c.id === id)?.name || 'Unknown';
-};
-
 const Scraper = () => {
-  
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCompetitor, setSelectedCompetitor] = useState('all');
+  const queryClient = useQueryClient();
+
+  const { data: competitors = [] } = useQuery({
+    queryKey: ['competitors'],
+    queryFn: () => competitorService.getCompetitors(),
+  });
+
+  const { data: scrapeTargets = [] } = useQuery({
+    queryKey: ['scrapeTargets'],
+    queryFn: () => competitorService.getScrapeTargets(),
+  });
+
+  const addScrapeTargetMutation = useMutation({
+    mutationFn: (data: any) => competitorService.addScrapeTarget(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scrapeTargets'] });
+      setIsOpen(false);
+      toast({
+        title: "Success",
+        description: "Scrape target added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add scrape target",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleScrapeTargetMutation = useMutation({
+    mutationFn: (id: number) => competitorService.toggleScrapeTarget(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scrapeTargets'] });
+    },
+  });
+
+  const deleteScrapeTargetMutation = useMutation({
+    mutationFn: (id: number) => competitorService.deleteScrapeTarget(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scrapeTargets'] });
+      toast({
+        title: "Success",
+        description: "Scrape target deleted successfully",
+      });
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      competitorId: Number(formData.get('competitor')),
+      type: formData.get('source-type') as 'website' | 'linkedin' | 'news' | 'jobs',
+      url: formData.get('url') as string,
+      frequency: formData.get('frequency') as 'daily' | 'weekly' | 'monthly',
+    };
+    addScrapeTargetMutation.mutate(data);
+  };
+
+  const filteredScrapeTargets = scrapeTargets.filter(target => {
+    const matchesSearch =
+      target.url.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCompetitor =
+      selectedCompetitor === 'all' || target.competitorId === Number(selectedCompetitor);
+    return matchesSearch && matchesCompetitor;
+  });
+
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-6">
@@ -55,7 +124,7 @@ const Scraper = () => {
             Configure and monitor your automated data collection
           </p>
         </div>
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -63,63 +132,67 @@ const Scraper = () => {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Source</DialogTitle>
-              <DialogDescription>
-                Configure a new source to scrape for competitor intelligence
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="competitor">Competitor</Label>
-                <Select>
-                  <SelectTrigger id="competitor">
-                    <SelectValue placeholder="Select competitor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockCompetitors.map(competitor => (
-                      <SelectItem key={competitor.id} value={competitor.id.toString()}>
-                        {competitor.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <form onSubmit={handleSubmit}>
+              <DialogHeader>
+                <DialogTitle>Add New Source</DialogTitle>
+                <DialogDescription>
+                  Configure a new source to scrape for competitor intelligence
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="competitor">Competitor</Label>
+                  <Select name="competitor" required>
+                    <SelectTrigger id="competitor">
+                      <SelectValue placeholder="Select competitor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {competitors.map(competitor => (
+                        <SelectItem key={competitor.id} value={competitor.id.toString()}>
+                          {competitor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="source-type">Source Type</Label>
+                  <Select name="source-type" required>
+                    <SelectTrigger id="source-type">
+                      <SelectValue placeholder="Select source type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="website">Website</SelectItem>
+                      <SelectItem value="linkedin">LinkedIn</SelectItem>
+                      <SelectItem value="news">News</SelectItem>
+                      <SelectItem value="jobs">Job Boards</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="url">URL</Label>
+                  <Input id="url" name="url" placeholder="https://example.com/page-to-scrape" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="frequency">Scraping Frequency</Label>
+                  <Select name="frequency" defaultValue="daily">
+                    <SelectTrigger id="frequency">
+                      <SelectValue placeholder="Select frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="source-type">Source Type</Label>
-                <Select>
-                  <SelectTrigger id="source-type">
-                    <SelectValue placeholder="Select source type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="website">Website</SelectItem>
-                    <SelectItem value="linkedin">LinkedIn</SelectItem>
-                    <SelectItem value="news">News</SelectItem>
-                    <SelectItem value="jobs">Job Boards</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="url">URL</Label>
-                <Input id="url" placeholder="https://example.com/page-to-scrape" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="frequency">Scraping Frequency</Label>
-                <Select defaultValue="daily">
-                  <SelectTrigger id="frequency">
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Add Source</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="submit" disabled={addScrapeTargetMutation.isPending}>
+                  {addScrapeTargetMutation.isPending ? "Adding..." : "Add Source"}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -128,16 +201,22 @@ const Scraper = () => {
         <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
           <div className="relative max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search sources..." className="w-full md:w-[300px] pl-8" />
+            <Input
+              type="search"
+              placeholder="Search sources..."
+              className="w-full md:w-[300px] pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select defaultValue="all">
+            <Select value={selectedCompetitor} onValueChange={setSelectedCompetitor}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by competitor" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Competitors</SelectItem>
-                {mockCompetitors.map(competitor => (
+                {competitors.map(competitor => (
                   <SelectItem key={competitor.id} value={competitor.id.toString()}>
                     {competitor.name}
                   </SelectItem>
@@ -185,62 +264,80 @@ const Scraper = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockScrapeTargets.map(target => (
-                  <TableRow key={target.id}>
-                    <TableCell>
-                      <span className="text-lg" title={target.type}>
-                        {getTypeIcon(target.type)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {getCompetitorName(target.competitorId)}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      <span className="max-w-[200px] truncate block">
-                        {target.url}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="capitalize">{target.frequency}</span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(target.status)}>
-                        {target.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {target.lastScraped || 'Never'}
-                    </TableCell>
-                    <TableCell>
-                      {target.nextScheduled || 'Not scheduled'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" title="Run now">
-                          <Play className="h-4 w-4" />
-                        </Button>
-                        {target.status === 'active' ? (
-                          <Button variant="ghost" size="icon" title="Pause">
-                            <CirclePause className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button variant="ghost" size="icon" title="Activate">
+                {filteredScrapeTargets.map(target => {
+                  const competitor = competitors.find(c => c.id === target.competitorId);
+                  return (
+                    <TableRow key={target.id}>
+                      <TableCell>
+                        <span className="text-lg" title={target.type}>
+                          {getTypeIcon(target.type)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {competitor?.name || 'Unknown'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <span className="max-w-[200px] truncate block">
+                          {target.url}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="capitalize">{target.frequency}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(target.status)}>
+                          {target.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {target.lastScraped || 'Never'}
+                      </TableCell>
+                      <TableCell>
+                        {target.nextScheduled || 'Not scheduled'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title="Run now">
                             <Play className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Button variant="ghost" size="icon" title="View results">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Settings">
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Delete">
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {target.status === 'active' ? (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Pause"
+                              onClick={() => toggleScrapeTargetMutation.mutate(target.id)}
+                            >
+                              <CirclePause className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Activate"
+                              onClick={() => toggleScrapeTargetMutation.mutate(target.id)}
+                            >
+                              <Play className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" title="View results">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Settings">
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="Delete"
+                            onClick={() => deleteScrapeTargetMutation.mutate(target.id)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -264,7 +361,7 @@ const Scraper = () => {
                       {i === 1 ? 'Website Scrape' : i === 2 ? 'News Collection' : 'LinkedIn Jobs'}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {mockCompetitors[i - 1].name}
+                      {competitors[i - 1]?.name || 'Unknown'}
                     </div>
                   </div>
                   <div className="text-right text-xs">
@@ -317,7 +414,7 @@ const Scraper = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm">Active sources</span>
                 <span className="font-medium">
-                  {mockScrapeTargets.filter(t => t.status === 'active').length}/{mockScrapeTargets.length}
+                  {scrapeTargets.filter(t => t.status === 'active').length}/{scrapeTargets.length}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -327,7 +424,7 @@ const Scraper = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm">Failed scrapes</span>
                 <span className="font-medium text-red-600">
-                  {mockScrapeTargets.filter(t => t.status === 'error').length}
+                  {scrapeTargets.filter(t => t.status === 'error').length}
                 </span>
               </div>
               <div className="flex justify-between items-center">

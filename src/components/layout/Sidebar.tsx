@@ -50,7 +50,7 @@ export function Sidebar() {
           <div className="flex items-center justify-between border-b px-6 py-4">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-primary animate-pulse-slow"></div>
-              <span className="text-lg font-semibold">CompetitivePulse</span>
+              <span className="text-lg font-semibold">Chiper AI</span>
             </div>
             <Button
               variant="ghost"
