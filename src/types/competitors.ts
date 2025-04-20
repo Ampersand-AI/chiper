@@ -1,4 +1,3 @@
-
 export interface Competitor {
   id: number;
   name: string;
@@ -37,11 +36,19 @@ export interface ApiSource {
   id: number;
   title: string;
   description: string;
-  api_url?: string; // Making optional since RSS sources don't have api_url
+  api_url?: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'RSS';
   params?: Record<string, string>;
   rss_url?: string;
   requiresKey: boolean;
   category: 'patents' | 'news' | 'jobs' | 'social' | 'company' | 'pr' | 'financial' | 'opensource' | 'crypto' | 'economic';
+  status?: 'active' | 'error' | 'paused';
+  lastRun?: string;
 }
 
+export interface ScraperConfig {
+  openaiKey?: string;
+  openrouterKey?: string;
+  newsApiKey?: string;
+  enabled: boolean;
+}

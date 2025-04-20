@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +10,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AlertTriangle, CheckCircle, Key, Save } from 'lucide-react';
+import { ScraperService } from '@/services/scraperService';
 
 const Settings = () => {
+  const [openRouterKey, setOpenRouterKey] = useState(localStorage.getItem('openrouterKey') || '');
+  const [openAIKey, setOpenAIKey] = useState(localStorage.getItem('openaiKey') || '');
+
+  const handleApiKeyChange = async (apiKey: string, type: 'openai' | 'openrouter') => {
+    const success = await ScraperService.testApiKey(apiKey, type);
+    if (success) {
+      localStorage.setItem(`${type}Key`, apiKey);
+      if (type === 'openai') {
+        setOpenAIKey(apiKey);
+      } else {
+        setOpenRouterKey(apiKey);
+      }
+    }
+  };
+
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-6">
@@ -167,14 +182,26 @@ const Settings = () => {
                     <Input
                       id="openrouter-key"
                       type="password"
-                      defaultValue="●●●●●●●●●●●●●●●●●●●●●●●●●●●●"
+                      value={openRouterKey ? '●●●●●●●●●●●●●●●●●●●●●●●●●●●●' : ''}
                       className="rounded-r-none"
+                      onChange={(e) => setOpenRouterKey(e.target.value)}
                     />
-                    <Button className="rounded-l-none">Show</Button>
+                    <Button className="rounded-l-none" onClick={() => handleApiKeyChange(openRouterKey, 'openrouter')}>
+                      {openRouterKey ? 'Show' : 'Connect'}
+                    </Button>
                   </div>
                   <div className="flex items-center mt-2 text-sm">
-                    <CheckCircle className="text-green-600 h-4 w-4 mr-1" />
-                    <span className="text-green-600">Connected and working properly</span>
+                    {openRouterKey ? (
+                      <>
+                        <CheckCircle className="text-green-600 h-4 w-4 mr-1" />
+                        <span className="text-green-600">Connected and working properly</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="text-yellow-600 h-4 w-4 mr-1" />
+                        <span className="text-yellow-600">Not connected</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -206,8 +233,12 @@ const Settings = () => {
                       type="password"
                       placeholder="Not configured (optional)"
                       className="rounded-r-none"
+                      value={openAIKey ? '●●●●●●●●●●●●●●●●●●●●●●●●●●●●' : ''}
+                      onChange={(e) => setOpenAIKey(e.target.value)}
                     />
-                    <Button className="rounded-l-none" disabled>Show</Button>
+                    <Button className="rounded-l-none" disabled={!openAIKey} onClick={() => handleApiKeyChange(openAIKey, 'openai')}>
+                      {openAIKey ? 'Show' : 'Connect'}
+                    </Button>
                   </div>
                   <div className="flex items-center mt-2 text-sm text-muted-foreground">
                     <AlertTriangle className="h-4 w-4 mr-1" />
