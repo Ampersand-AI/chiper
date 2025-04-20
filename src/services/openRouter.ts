@@ -65,7 +65,7 @@ export const extractStructuredData = async (webScrapedHtml: string, apiKey?: str
 export const generateScraper = async (url: string, apiKey?: string): Promise<string> => {
   return queryOpenRouter("deepseek/deepseek-coder", [
     { role: "system", content: "You are an expert web scraper that generates reliable scraping code." },
-    { role: "user", content: `Generate a JavaScript function that can scrape content from ${url}. The code should be resilient to website structure changes.` },
+    { role: "user", content: `Generate a JavaScript function that can scrape content from ${url}. The code should be resilient to website structure changes, extract product information, pricing, and key features. Use Puppeteer for browser automation and return structured JSON data.` },
   ], apiKey);
 };
 

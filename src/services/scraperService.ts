@@ -1,7 +1,7 @@
 
 import { ApiSource, Insight, ScraperCode, InsightAnalysis, InsightReport, ScraperConfig } from '@/types/competitors';
 import { toast } from '@/hooks/use-toast';
-import { queryOpenRouter, getInsights, analyzeCompetitorStrategy, formatInsightReport } from './openRouter';
+import { queryOpenRouter, getInsights, analyzeCompetitorStrategy, formatInsightReport, generateScraper } from './openRouter';
 
 export class ScraperService {
   private static formatError(error: any): string {
@@ -149,6 +149,28 @@ export class ScraperService {
           }));
           break;
           
+        case 'social':
+          mockData = {
+            posts: [
+              { content: `${competitorName} announces partnership with leading tech firm`, platform: 'Twitter', posted: new Date().toISOString() },
+              { content: `${competitorName} showcases new technology at industry conference`, platform: 'LinkedIn', posted: new Date().toISOString() }
+            ]
+          };
+          
+          insights = mockData.posts.map((post: any, index: number) => ({
+            id: Math.floor(Math.random() * 10000) + index,
+            competitorId,
+            type: 'social',
+            title: `${post.platform} post`,
+            description: post.content,
+            source: source.title,
+            date: post.posted,
+            sentiment: 'positive',
+            impact: 'low',
+            rawData: post
+          }));
+          break;
+          
         // Add more cases for other categories
         default:
           mockData = {
@@ -195,23 +217,12 @@ export class ScraperService {
         throw new Error('OpenRouter API key is required to generate scrapers');
       }
       
-      const prompt = `You are an expert scraper coder. Write a JavaScript scraper using Puppeteer that extracts product titles, prices, and descriptions from the competitor's product page: ${websiteUrl}.
-
-      Requirements:
-      - Use async/await
-      - Return structured JSON format
-      - Scrape dynamic content if needed
-      - Output only code`;
-
       // Use DeepSeek Coder model via OpenRouter
       let scraperCode = '';
       
       try {
         // Call the OpenRouter API with DeepSeek Coder model
-        scraperCode = await queryOpenRouter("deepseek/deepseek-coder", [
-          { role: "system", content: "You are an expert web scraper that generates reliable scraping code." },
-          { role: "user", content: prompt }
-        ], config.openrouterKey);
+        scraperCode = await generateScraper(websiteUrl, config.openrouterKey);
       } catch (error) {
         console.error('Error generating scraper:', error);
         // Fallback to mock code if API call fails

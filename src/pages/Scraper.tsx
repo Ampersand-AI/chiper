@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { competitorService } from '@/services/competitorService';
 import { ScraperService } from '@/services/scraperService';
 import { toast } from '@/hooks/use-toast';
-import { ApiSource, Insight } from '@/types/competitors';
+import { ApiSource, Insight, InsightAnalysis, InsightReport } from '@/types/competitors';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -95,6 +94,7 @@ const Scraper = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isApiDetailsOpen, setIsApiDetailsOpen] = useState(false);
   const [isRunScraperOpen, setIsRunScraperOpen] = useState(false);
+  const [isGenerateReportOpen, setIsGenerateReportOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompetitor, setSelectedCompetitor] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -103,6 +103,8 @@ const Scraper = () => {
   const [activeTab, setActiveTab] = useState('sources');
   const [isProcessing, setIsProcessing] = useState(false);
   const [scrapedInsights, setScrapedInsights] = useState<Insight[]>([]);
+  const [insightAnalysis, setInsightAnalysis] = useState<InsightAnalysis | null>(null);
+  const [insightReport, setInsightReport] = useState<InsightReport | null>(null);
   const queryClient = useQueryClient();
 
   // Get API configuration on component mount
@@ -242,10 +244,29 @@ const Scraper = () => {
         await competitorService.addInsight(insight);
       }
 
+      // Generate analysis after scraping
+      if (insights.length > 0) {
+        const analysis = await ScraperService.analyzeInsights(insights, competitor.name);
+        if (analysis) {
+          setInsightAnalysis(analysis);
+          
+          // Generate report
+          const report = await ScraperService.generateReport(analysis, insights, competitor.name, selectedCompetitorId);
+          if (report) {
+            setInsightReport(report);
+            await competitorService.addInsightReport(report);
+            setActiveTab('results');
+          }
+        }
+      }
+
       toast({
         title: "Scraper Completed",
         description: `Generated ${insights.length} insights for ${competitor.name}`,
       });
+      
+      // Close the dialog and show results
+      setIsRunScraperOpen(false);
     } catch (error) {
       toast({
         title: "Scraper Failed",
@@ -293,6 +314,9 @@ const Scraper = () => {
           title: "Custom Scraper Generated",
           description: `Created new scraper for ${competitor.name} using DeepSeek Coder AI`,
         });
+        
+        // Close the dialog
+        setIsGenerateReportOpen(false);
       }
     } catch (error) {
       toast({
@@ -664,7 +688,10 @@ const Scraper = () => {
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <Badge className={getCategoryColor(api.category)}>
-                        {api.category.charAt(0).toUpperCase() + api.category.slice(1)}
+                        <div className="flex items-center gap-1.5">
+                          {getCategoryIcon(api.category)}
+                          <span>{api.category.charAt(0).toUpperCase() + api.category.slice(1)}</span>
+                        </div>
                       </Badge>
                       {api.requiresKey && (
                         <Badge variant="outline" className="ml-2">Requires API Key</Badge>
@@ -750,266 +777,64 @@ const Scraper = () => {
         <TabsContent value="results" className="mt-0">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Results</CardTitle>
+              <CardTitle>Generated Reports</CardTitle>
               <CardDescription>
-                View insights gathered from recent scraping operations
+                View insights and reports gathered from recent scraping operations
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {scrapedInsights.length > 0 ? (
-                <div className="space-y-4">
-                  {scrapedInsights.map(insight => (
-                    <div key={insight.id} className="p-4 border rounded-md">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{insight.title}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">{insight.description}</p>
-                        </div>
-                        <Badge className={insight.sentiment === 'positive' ? 'bg-green-100 text-green-800' : 
-                                        insight.sentiment === 'negative' ? 'bg-red-100 text-red-800' : 
-                                        'bg-blue-100 text-blue-800'}>
-                          {insight.sentiment}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                        <span>Source: {insight.source}</span>
-                        <span>Impact: {insight.impact}</span>
-                        <span>Date: {new Date(insight.date).toLocaleDateString()}</span>
-                      </div>
+              {insightReport ? (
+                <div className="space-y-6">
+                  <div className="border rounded-lg p-4">
+                    <h3 className="text-xl font-semibold mb-2">Executive Summary for {insightReport.competitorName}</h3>
+                    
+                    <div className="mb-4">
+                      <h4 className="text-lg font-medium mb-2">Overview</h4>
+                      <p className="text-muted-foreground">{insightReport.overview}</p>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 border rounded-md bg-muted/30">
-                  <p className="text-center text-muted-foreground">No results yet. Configure sources and run scrapers to collect data.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <div className="grid gap-6 mt-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Runs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {scrapeTargets.length > 0 ? (
-                [1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded bg-primary/20 flex items-center justify-center text-primary font-bold">
-                      {getTypeIcon(i === 1 ? 'website' : i === 2 ? 'news' : 'linkedin')}
+                    
+                    <div className="mb-4">
+                      <h4 className="text-lg font-medium mb-2">Key Moves</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {insightReport.keyMoves.map((move, i) => (
+                          <li key={i} className="text-muted-foreground">{move}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">
-                        {i === 1 ? 'Website Scrape' : i === 2 ? 'News Collection' : 'LinkedIn Jobs'}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {i === 1 ? 'PatentsView API' : i === 2 ? 'NewsAPI' : 'RemoteOK Jobs API'}
-                      </div>
-                    </div>
-                    <div className="text-right text-xs">
-                      <div>{i * 2} hours ago</div>
-                      <Badge variant="outline" className={i === 3 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}>
-                        {i === 3 ? 'Failed' : 'Success'}
+                    
+                    <div className="mb-4">
+                      <h4 className="text-lg font-medium mb-2">Threat Level</h4>
+                      <Badge className={
+                        insightReport.threatLevel === 'high' ? 'bg-red-100 text-red-800' : 
+                        insightReport.threatLevel === 'medium' ? 'bg-amber-100 text-amber-800' : 
+                        'bg-green-100 text-green-800'
+                      }>
+                        {insightReport.threatLevel.charAt(0).toUpperCase() + insightReport.threatLevel.slice(1)}
                       </Badge>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-4 border rounded-md bg-muted/30">
-                  <p className="text-center text-muted-foreground">No recent runs. Configure and run scrapers to see activity.</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Upcoming Scrapes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {scrapeTargets.filter(t => t.status === 'active').length > 0 ? (
-                [1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
+                    
+                    <div className="mb-4">
+                      <h4 className="text-lg font-medium mb-2">Opportunities</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {insightReport.opportunities.map((opportunity, i) => (
+                          <li key={i} className="text-muted-foreground">{opportunity}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">
-                        {i === 1 ? 'GitHub Public Repos' : i === 2 ? 'SEC EDGAR API' : 'CoinGecko API'}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {i === 1 ? 'Daily scrape' : i === 2 ? 'Weekly check' : 'Monthly scan'}
-                      </div>
-                    </div>
-                    <div className="text-right text-xs">
-                      <div>In {i * 6} hours</div>
-                      <Button variant="ghost" size="sm" className="h-6">Run now</Button>
+                    
+                    <div className="text-xs text-muted-foreground mt-4">
+                      Generated on {new Date(insightReport.lastUpdated).toLocaleString()}
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="p-4 border rounded-md bg-muted/30">
-                  <p className="text-center text-muted-foreground">No upcoming scrapes scheduled.</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Scraper Health</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Active sources</span>
-                <span className="font-medium">
-                  {scrapeTargets.filter(t => t.status === 'active').length}/{scrapeTargets.length}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Success rate (24h)</span>
-                <span className="font-medium text-green-600">92%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Failed scrapes</span>
-                <span className="font-medium text-red-600">
-                  {scrapeTargets.filter(t => t.status === 'error').length}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Total APIs available</span>
-                <span className="font-medium">{apiSources.length}</span>
-              </div>
-              <Button variant="outline" className="w-full mt-2" asChild>
-                <a href="/settings">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Configure Settings
-                </a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Dialog open={isApiDetailsOpen} onOpenChange={setIsApiDetailsOpen}>
-        <DialogContent className="max-w-3xl">
-          {selectedApiSource && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className={getCategoryColor(selectedApiSource.category)}>
-                    {selectedApiSource.category.charAt(0).toUpperCase() + selectedApiSource.category.slice(1)}
-                  </Badge>
-                  {selectedApiSource.requiresKey && (
-                    <Badge variant="outline">Requires API Key</Badge>
-                  )}
-                </div>
-                <DialogTitle>{selectedApiSource.title}</DialogTitle>
-                <DialogDescription>
-                  {selectedApiSource.description}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div>
-                  <h3 className="font-medium mb-1">API Endpoint</h3>
-                  <div className="bg-muted p-2 rounded-md font-mono text-sm break-all">
-                    {selectedApiSource.api_url || selectedApiSource.rss_url}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-medium mb-1">Method</h3>
-                  <div className="text-sm">{selectedApiSource.method}</div>
-                </div>
-                {selectedApiSource.params && (
+                  
                   <div>
-                    <h3 className="font-medium mb-1">Parameters</h3>
-                    <div className="bg-muted p-2 rounded-md font-mono text-sm">
-                      <pre>{JSON.stringify(selectedApiSource.params, null, 2)}</pre>
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-medium mb-1">Usage Instructions</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Replace placeholders like &lt;COMPETITOR_NAME&gt; with your target competitor's information.
-                    {selectedApiSource.requiresKey && " You'll need to provide an API key for this service."}
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsApiDetailsOpen(false)}>
-                  Close
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setIsApiDetailsOpen(false);
-                    openRunScraperDialog(selectedApiSource);
-                  }}
-                  disabled={!apiConfig.openrouterKey || !hasCompetitors}
-                >
-                  Run Scraper
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isRunScraperOpen} onOpenChange={setIsRunScraperOpen}>
-        <DialogContent>
-          {selectedApiSource && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Run {selectedApiSource.title} Scraper</DialogTitle>
-                <DialogDescription>
-                  Select a competitor to scrape data for
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="run-competitor">Competitor</Label>
-                  <Select 
-                    value={selectedCompetitorId?.toString() || ""} 
-                    onValueChange={(value) => setSelectedCompetitorId(Number(value))}
-                  >
-                    <SelectTrigger id="run-competitor">
-                      <SelectValue placeholder="Select competitor" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className="bg-background">
-                      {competitors.map(competitor => (
-                        <SelectItem key={competitor.id} value={competitor.id.toString()}>
-                          {competitor.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsRunScraperOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={runScraper} 
-                  disabled={isProcessing || !selectedCompetitorId}
-                >
-                  {isProcessing ? "Processing..." : "Run Scraper"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </MainLayout>
-  );
-};
-
-export default Scraper;
+                    <h3 className="text-lg font-medium mb-3">Source Insights</h3>
+                    <div className="space-y-3">
+                      {insightReport.insights.map(insight => (
+                        <div key={insight.id} className="p-3 border rounded-md">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium">{insight.title}</h3>
+                              <p className="text-sm text-muted-foreground mt-1">{insight.description}</p>
+                            </div>
+                            <Badge className={insight.sentiment === 'positive' ? 'bg-green-100 text-green-800' :
