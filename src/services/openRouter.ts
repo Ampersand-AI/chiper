@@ -12,14 +12,14 @@ interface OpenRouterResponse {
   }>;
 }
 
-export async function queryOpenRouter(model: string, messages: Message[]): Promise<string> {
+export async function queryOpenRouter(model: string, messages: Message[], apiKey?: string): Promise<string> {
   try {
-    // Note: In a production app, you would store the API key securely
-    // For demo purposes, we'll use a placeholder
+    const key = apiKey || 'YOUR_OPENROUTER_API_KEY'; // In production, get this from secure storage
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer YOUR_OPENROUTER_API_KEY',
+        'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -40,24 +40,38 @@ export async function queryOpenRouter(model: string, messages: Message[]): Promi
   }
 }
 
-// Helper functions for specific AI models
-export const getInsights = async (competitorData: string): Promise<string> => {
+// Helper functions for specific AI models and use cases
+export const getInsights = async (competitorData: string, apiKey?: string): Promise<string> => {
   return queryOpenRouter("anthropic/claude-3-sonnet", [
     { role: "system", content: "You are a competitive strategy expert." },
     { role: "user", content: "Analyze this content from a competitor and highlight positioning, gaps, and market moves:\n\n" + competitorData },
-  ]);
+  ], apiKey);
 };
 
-export const extractStructuredData = async (webScrapedHtml: string): Promise<string> => {
+export const extractStructuredData = async (webScrapedHtml: string, apiKey?: string): Promise<string> => {
   return queryOpenRouter("openai/gpt-4-turbo", [
     { role: "system", content: "You are an expert at extracting structured info from messy web text." },
     { role: "user", content: "Extract pricing, features, product names and format as JSON:\n\n" + webScrapedHtml },
-  ]);
+  ], apiKey);
 };
 
-export const generateScraper = async (url: string): Promise<string> => {
+export const generateScraper = async (url: string, apiKey?: string): Promise<string> => {
   return queryOpenRouter("deepseek/deepseek-coder", [
     { role: "system", content: "You are an expert web scraper that generates reliable scraping code." },
     { role: "user", content: `Generate a JavaScript function that can scrape content from ${url}. The code should be resilient to website structure changes.` },
-  ]);
+  ], apiKey);
+};
+
+export const analyzeCompetitorStrategy = async (insights: string, apiKey?: string): Promise<string> => {
+  return queryOpenRouter("anthropic/claude-3-sonnet", [
+    { role: "system", content: "You're a competitive intelligence analyst." },
+    { role: "user", content: `Analyze the following data about a company and summarize their product strategy, market positioning, and potential gaps in 3-5 bullet points.\n\nData:\n${insights}` },
+  ], apiKey);
+};
+
+export const formatInsightReport = async (analyzedData: string, apiKey?: string): Promise<string> => {
+  return queryOpenRouter("openai/gpt-4-turbo", [
+    { role: "system", content: "You are an executive report writer." },
+    { role: "user", content: `Generate a clean and structured executive summary from this competitor data. Format it in Markdown with sections: Overview, Key Moves, Threat Level, and Opportunities.\n\nInput:\n${analyzedData}` },
+  ], apiKey);
 };

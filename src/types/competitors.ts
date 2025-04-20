@@ -1,3 +1,4 @@
+
 export interface Competitor {
   id: number;
   name: string;
@@ -7,18 +8,22 @@ export interface Competitor {
   industryPositioning: string;
   sentimentScore: number;
   lastUpdated: string;
+  githubUsername?: string;
+  cikId?: string;
+  country?: string;
 }
 
 export interface Insight {
   id: number;
   competitorId: number;
-  type: 'product' | 'hiring' | 'expansion' | 'pricing' | 'news';
+  type: 'product' | 'hiring' | 'expansion' | 'pricing' | 'news' | 'patent' | 'financial' | 'social' | 'opensource';
   title: string;
   description: string;
   source: string;
   date: string;
   sentiment: 'positive' | 'negative' | 'neutral';
   impact: 'high' | 'medium' | 'low';
+  rawData?: any; // For storing the original API response
 }
 
 export interface ScrapeTarget {
@@ -51,4 +56,39 @@ export interface ScraperConfig {
   openrouterKey?: string;
   newsApiKey?: string;
   enabled: boolean;
+}
+
+// For custom scraper generation
+export interface ScraperCode {
+  id: number;
+  competitorId: number;
+  url: string;
+  code: string;
+  createdAt: string;
+  updatedAt: string;
+  status: 'active' | 'paused' | 'error';
+}
+
+// For insight processing
+export interface InsightAnalysis {
+  id: number;
+  insightId: number;
+  summary: string;
+  productStrategy?: string;
+  marketPositioning?: string;
+  gaps?: string;
+  threatLevel?: 'high' | 'medium' | 'low';
+  opportunities?: string;
+  createdAt: string;
+}
+
+export type InsightReport = {
+  competitorId: number;
+  competitorName: string;
+  overview: string;
+  keyMoves: string[];
+  threatLevel: 'high' | 'medium' | 'low';
+  opportunities: string[];
+  insights: Insight[];
+  lastUpdated: string;
 }

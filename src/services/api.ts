@@ -1,10 +1,14 @@
-import { Competitor, Insight, ScrapeTarget, ApiSource } from '@/types/competitors';
+
+import { Competitor, Insight, ScrapeTarget, ApiSource, ScraperCode, InsightAnalysis, InsightReport } from '@/types/competitors';
 
 // This would be replaced with real API calls once connected to a backend
 export class CompetitorService {
   private competitors: Competitor[] = [];
   private insights: Insight[] = [];
   private scrapeTargets: ScrapeTarget[] = [];
+  private scraperCodes: ScraperCode[] = [];
+  private insightAnalyses: InsightAnalysis[] = [];
+  private insightReports: InsightReport[] = [];
   private apiSources: ApiSource[] = [
     {
       id: 1,
@@ -132,6 +136,31 @@ export class CompetitorService {
     return this.competitors.find(c => c.id === id);
   }
 
+  async updateCompetitor(id: number, data: Partial<Competitor>): Promise<Competitor | undefined> {
+    const index = this.competitors.findIndex(c => c.id === id);
+    if (index !== -1) {
+      this.competitors[index] = {
+        ...this.competitors[index],
+        ...data,
+        lastUpdated: new Date().toISOString(),
+      };
+      return this.competitors[index];
+    }
+    return undefined;
+  }
+
+  async deleteCompetitor(id: number): Promise<boolean> {
+    const index = this.competitors.findIndex(c => c.id === id);
+    if (index !== -1) {
+      this.competitors.splice(index, 1);
+      // Also delete related data
+      this.insights = this.insights.filter(i => i.competitorId !== id);
+      this.scrapeTargets = this.scrapeTargets.filter(t => t.competitorId !== id);
+      return true;
+    }
+    return false;
+  }
+
   async addInsight(insight: Omit<Insight, 'id'>): Promise<Insight> {
     const newInsight = {
       ...insight,
@@ -188,6 +217,50 @@ export class CompetitorService {
 
   async getApiSource(id: number): Promise<ApiSource | undefined> {
     return this.apiSources.find(api => api.id === id);
+  }
+
+  // New methods for custom scrapers
+  async addScraperCode(scraperCode: Omit<ScraperCode, 'id'>): Promise<ScraperCode> {
+    const newScraperCode: ScraperCode = {
+      ...scraperCode,
+      id: Math.floor(Math.random() * 10000),
+    };
+    this.scraperCodes.push(newScraperCode);
+    return newScraperCode;
+  }
+
+  async getScraperCodes(competitorId?: number): Promise<ScraperCode[]> {
+    return competitorId
+      ? this.scraperCodes.filter(c => c.competitorId === competitorId)
+      : this.scraperCodes;
+  }
+
+  // Methods for insight analysis
+  async addInsightAnalysis(analysis: Omit<InsightAnalysis, 'id'>): Promise<InsightAnalysis> {
+    const newAnalysis: InsightAnalysis = {
+      ...analysis,
+      id: Math.floor(Math.random() * 10000),
+    };
+    this.insightAnalyses.push(newAnalysis);
+    return newAnalysis;
+  }
+
+  async getInsightAnalyses(insightId?: number): Promise<InsightAnalysis[]> {
+    return insightId
+      ? this.insightAnalyses.filter(a => a.insightId === insightId)
+      : this.insightAnalyses;
+  }
+
+  // Methods for insight reports
+  async addInsightReport(report: InsightReport): Promise<InsightReport> {
+    this.insightReports.push(report);
+    return report;
+  }
+
+  async getInsightReports(competitorId?: number): Promise<InsightReport[]> {
+    return competitorId
+      ? this.insightReports.filter(r => r.competitorId === competitorId)
+      : this.insightReports;
   }
 }
 

@@ -26,7 +26,7 @@
     --accent: 0 0% 96%;
     --accent-foreground: 0 0% 0%;
     
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 0% 0%;
     --destructive-foreground: 0 0% 98%;
     
     --border: 0 0% 89.8%;
@@ -34,6 +34,36 @@
     --ring: 0 0% 0%;
     
     --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+    
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 0% 60%;
+    --destructive-foreground: 0 0% 0%;
+    
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 100%;
   }
 }
 
@@ -54,5 +84,31 @@
   
   .card-gradient {
     @apply bg-gradient-to-br from-card to-secondary/80 backdrop-blur-sm;
+  }
+
+  /* Status and category badges */
+  .status-active {
+    @apply bg-black text-white;
+  }
+
+  .status-paused {
+    @apply bg-gray-200 text-black;
+  }
+
+  .status-error {
+    @apply bg-gray-100 text-gray-800;
+  }
+
+  /* Black and white specific styling */
+  .content-section {
+    @apply border border-gray-200 rounded-md p-4 mb-4;
+  }
+
+  .content-header {
+    @apply font-bold text-lg mb-2;
+  }
+
+  .data-item {
+    @apply py-2 border-b border-gray-100 last:border-0;
   }
 }
