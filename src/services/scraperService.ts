@@ -1,4 +1,3 @@
-
 import { ApiSource, Insight, InsightAnalysis, InsightReport, ScraperCode } from "@/types/competitors";
 import { getInsights, extractStructuredData, generateScraper, analyzeCompetitorStrategy, formatInsightReport } from "./openRouter";
 
@@ -8,10 +7,11 @@ export class ScraperService {
     return config ? JSON.parse(config) : {};
   }
 
-  static async setConfig(newConfig: {openrouterKey?: string, openaiKey?: string, newsApiKey?: string}) {
+  static async setConfig(newConfig: {openrouterKey?: string, openaiKey?: string, newsApiKey?: string, enabled?: boolean}) {
     const currentConfig = this.getConfigFromStorage();
     const updatedConfig = { ...currentConfig, ...newConfig };
     localStorage.setItem('scraperConfig', JSON.stringify(updatedConfig));
+    console.log("Config saved:", updatedConfig);
     return updatedConfig;
   }
 
@@ -21,14 +21,45 @@ export class ScraperService {
 
   static async testApiKey(key: string, type: 'openai' | 'openrouter' | 'newsapi'): Promise<boolean> {
     try {
+      console.log(`Testing ${type} API key: ${key.substring(0, 5)}...`);
+      
       switch (type) {
         case 'openrouter':
-          // Test with a simple Claude query
-          const response = await getInsights("Test message", key);
-          return response.length > 0;
+          // Test with a simple Claude query using a lightweight model
+          const systemPrompt = "You are a test assistant.";
+          const userPrompt = "Reply with only 'OK' if this works.";
+          
+          // Make a minimal request to test the API key
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${key}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': window.location.href,
+              'X-Title': 'Competitive Intelligence Scraper - Key Test',
+            },
+            body: JSON.stringify({
+              model: "anthropic/claude-3-haiku",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+              ],
+              max_tokens: 10,
+            }),
+          });
+          
+          const data = await response.json();
+          console.log("OpenRouter test response:", data);
+          
+          if (!response.ok) {
+            console.error("OpenRouter API key test failed:", data);
+            return false;
+          }
+          
+          return true;
           
         case 'newsapi':
-          const newsResponse = await fetch(`https://newsapi.org/v2/everything?q=test&apiKey=${key}`);
+          const newsResponse = await fetch(`https://newsapi.org/v2/everything?q=test&apiKey=${key}&pageSize=1`);
           return newsResponse.ok;
           
         case 'openai':

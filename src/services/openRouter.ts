@@ -14,6 +14,11 @@ interface OpenRouterResponse {
 
 export async function queryOpenRouter(model: string, messages: Message[], apiKey?: string): Promise<string> {
   try {
+    if (!apiKey) {
+      const config = JSON.parse(localStorage.getItem('scraperConfig') || '{}');
+      apiKey = config.openrouterKey;
+    }
+
     if (!apiKey || apiKey === 'YOUR_OPENROUTER_API_KEY') {
       throw new Error('No OpenRouter API key provided');
     }
@@ -31,11 +36,13 @@ export async function queryOpenRouter(model: string, messages: Message[], apiKey
       body: JSON.stringify({
         model,
         messages,
+        max_tokens: 1000, // Adding token limit to avoid credit errors
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`OpenRouter API error: ${errorText}`);
       throw new Error(`OpenRouter API returned ${response.status}: ${errorText}`);
     }
 
@@ -49,14 +56,14 @@ export async function queryOpenRouter(model: string, messages: Message[], apiKey
 
 // Helper functions for specific AI models and use cases
 export const getInsights = async (competitorData: string, apiKey?: string): Promise<string> => {
-  return queryOpenRouter("anthropic/claude-3-sonnet", [
+  return queryOpenRouter("anthropic/claude-3-haiku", [
     { role: "system", content: "You are a competitive strategy expert." },
     { role: "user", content: "Analyze this content from a competitor and highlight positioning, gaps, and market moves:\n\n" + competitorData },
   ], apiKey);
 };
 
 export const extractStructuredData = async (webScrapedHtml: string, apiKey?: string): Promise<string> => {
-  return queryOpenRouter("openai/gpt-4-turbo", [
+  return queryOpenRouter("openai/gpt-3.5-turbo", [
     { role: "system", content: "You are an expert at extracting structured info from messy web text." },
     { role: "user", content: "Extract pricing, features, product names and format as JSON:\n\n" + webScrapedHtml },
   ], apiKey);
@@ -102,21 +109,21 @@ async function scrapeWebsite(url) {
 })();
   `;
 
-  return queryOpenRouter("deepseek/deepseek-coder", [
+  return queryOpenRouter("mistralai/mistral-medium", [
     { role: "system", content: "You are an expert web scraper that generates reliable scraping code. Use the provided template as a starting point, but customize it for the specific website." },
     { role: "user", content: `Generate a JavaScript function that can scrape content from ${url}. The code should be resilient to website structure changes, extract product information, pricing, and key features. Use Puppeteer for browser automation and return structured JSON data. Start with this template and adapt it:\n\n${scraperTemplate}` },
   ], apiKey);
 };
 
 export const analyzeCompetitorStrategy = async (insights: string, apiKey?: string): Promise<string> => {
-  return queryOpenRouter("anthropic/claude-3-sonnet", [
+  return queryOpenRouter("anthropic/claude-3-haiku", [
     { role: "system", content: "You're a competitive intelligence analyst." },
     { role: "user", content: `Analyze the following data about a company and summarize their product strategy, market positioning, and potential gaps in 3-5 bullet points.\n\nData:\n${insights}` },
   ], apiKey);
 };
 
 export const formatInsightReport = async (analyzedData: string, apiKey?: string): Promise<string> => {
-  return queryOpenRouter("openai/gpt-4-turbo", [
+  return queryOpenRouter("openai/gpt-3.5-turbo", [
     { role: "system", content: "You are an executive report writer." },
     { role: "user", content: `Generate a clean and structured executive summary from this competitor data. Format it in Markdown with sections: Overview, Key Moves, Threat Level, and Opportunities.\n\nInput:\n${analyzedData}` },
   ], apiKey);
