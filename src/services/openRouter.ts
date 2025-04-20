@@ -109,7 +109,8 @@ async function scrapeWebsite(url) {
 })();
   `;
 
-  return queryOpenRouter("mistralai/mistral-medium", [
+  // Specifically use DeepSeek Coder for generating scraper code
+  return queryOpenRouter("deepseek/deepseek-coder", [
     { role: "system", content: "You are an expert web scraper that generates reliable scraping code. Use the provided template as a starting point, but customize it for the specific website." },
     { role: "user", content: `Generate a JavaScript function that can scrape content from ${url}. The code should be resilient to website structure changes, extract product information, pricing, and key features. Use Puppeteer for browser automation and return structured JSON data. Start with this template and adapt it:\n\n${scraperTemplate}` },
   ], apiKey);

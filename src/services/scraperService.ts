@@ -1,3 +1,4 @@
+
 import { ApiSource, Insight, InsightAnalysis, InsightReport, ScraperCode } from "@/types/competitors";
 import { getInsights, extractStructuredData, generateScraper, analyzeCompetitorStrategy, formatInsightReport } from "./openRouter";
 
