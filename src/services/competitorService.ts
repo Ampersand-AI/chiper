@@ -375,7 +375,7 @@ class CompetitorService {
     const newTarget: ScrapeTarget = {
       ...target,
       id: Date.now(),
-      status: 'active',
+      status: 'active' as const,
       lastScraped: null,
       nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     };
@@ -399,8 +399,12 @@ class CompetitorService {
     const index = targets.findIndex(t => t.id === id);
     
     if (index !== -1) {
-      const newStatus = targets[index].status === 'active' ? 'paused' : 'active';
-      const updatedTarget = { ...targets[index], status: newStatus };
+      // Fix: Use a properly typed status value
+      const newStatus = targets[index].status === 'active' ? 'paused' as const : 'active' as const;
+      const updatedTarget: ScrapeTarget = { 
+        ...targets[index], 
+        status: newStatus 
+      };
       
       targets[index] = updatedTarget;
       this.scrapeTargets = targets;
