@@ -32,3 +32,15 @@ export interface ScrapeTarget {
   lastScraped: string | null;
   nextScheduled: string | null;
 }
+
+export interface ApiSource {
+  id: number;
+  title: string;
+  description: string;
+  api_url: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'RSS';
+  params?: Record<string, string>;
+  rss_url?: string;
+  requiresKey: boolean;
+  category: 'patents' | 'news' | 'jobs' | 'social' | 'company' | 'pr' | 'financial' | 'opensource' | 'crypto' | 'economic';
+}
