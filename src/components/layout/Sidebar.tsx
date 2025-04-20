@@ -10,7 +10,8 @@ import {
   FileText,
   Home,
   Menu,
-  X
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,7 +50,7 @@ export function Sidebar() {
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b px-6 py-4">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-primary animate-pulse-slow"></div>
+              <div className="h-6 w-6 rounded-full bg-primary"></div>
               <span className="text-lg font-semibold">Chiper AI</span>
             </div>
             <Button
@@ -62,29 +63,38 @@ export function Sidebar() {
             </Button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-4">
-            <ul className="space-y-2">
-              {navItems.map((item) => (
-                <li key={item.name}>
-                  <Link
-                    to={item.path}
-                    className={cn(
-                      "nav-link",
-                      location.pathname === item.path && "nav-link-active"
-                    )}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                </li>
-              ))}
+          <nav className="flex-1 overflow-y-auto p-3">
+            <ul className="space-y-1">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                
+                return (
+                  <li key={item.name}>
+                    <Link
+                      to={item.path}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.name}</span>
+                      {isActive && (
+                        <ChevronRight className="ml-auto h-4 w-4" />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 
           <div className="border-t p-4">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-accent"></div>
+              <div className="h-9 w-9 rounded-full bg-muted"></div>
               <div className="flex flex-col">
                 <span className="text-sm font-medium">Demo User</span>
                 <span className="text-xs text-muted-foreground">demo@competitivepulse.com</span>

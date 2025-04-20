@@ -63,9 +63,48 @@ export const extractStructuredData = async (webScrapedHtml: string, apiKey?: str
 };
 
 export const generateScraper = async (url: string, apiKey?: string): Promise<string> => {
+  const scraperTemplate = `
+// Kaggle datasets scraper example template
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+const fetch = require('node-fetch');
+
+async function scrapeWebsite(url) {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto(url, { waitUntil: 'networkidle2' });
+
+  const results = [];
+  
+  // Extract relevant information from the page
+  // This part should be customized based on the website structure
+  const data = await page.evaluate(() => {
+    return {
+      // Extract specific elements from the page
+      // Example for a generic website
+      title: document.querySelector('h1')?.innerText || 'N/A',
+      description: document.querySelector('meta[name="description"]')?.content || 'N/A',
+      // Add more fields as needed
+    };
+  });
+  
+  results.push(data);
+  await browser.close();
+  
+  return results;
+}
+
+// Main function to run the scraper
+(async () => {
+  const websiteData = await scrapeWebsite('${url}');
+  console.log(JSON.stringify(websiteData, null, 2));
+})();
+  `;
+
   return queryOpenRouter("deepseek/deepseek-coder", [
-    { role: "system", content: "You are an expert web scraper that generates reliable scraping code." },
-    { role: "user", content: `Generate a JavaScript function that can scrape content from ${url}. The code should be resilient to website structure changes, extract product information, pricing, and key features. Use Puppeteer for browser automation and return structured JSON data.` },
+    { role: "system", content: "You are an expert web scraper that generates reliable scraping code. Use the provided template as a starting point, but customize it for the specific website." },
+    { role: "user", content: `Generate a JavaScript function that can scrape content from ${url}. The code should be resilient to website structure changes, extract product information, pricing, and key features. Use Puppeteer for browser automation and return structured JSON data. Start with this template and adapt it:\n\n${scraperTemplate}` },
   ], apiKey);
 };
 

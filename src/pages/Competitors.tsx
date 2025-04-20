@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { CompetitorCard } from '@/components/dashboard/CompetitorCard';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ const Competitors = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: competitors = [], isLoading } = useQuery({
     queryKey: ['competitors'],
@@ -57,6 +59,11 @@ const Competitors = () => {
       industryPositioning: formData.get('positioning') as string,
     };
     addCompetitorMutation.mutate(data);
+  };
+
+  // Navigate to competitor detail page
+  const handleViewDetails = (competitorId: number) => {
+    navigate(`/competitors/${competitorId}`);
   };
 
   // Filter competitors by search query
@@ -160,6 +167,7 @@ const Competitors = () => {
                 logo: competitor.logo || '/placeholder.svg' // Ensure logo is provided
               }}
               insightCount={getInsightCount(competitor.id)}
+              onViewDetails={() => handleViewDetails(competitor.id)}
             />
           ))}
         </div>
