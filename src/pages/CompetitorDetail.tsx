@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,8 @@ import { ArrowLeft, Edit, ExternalLink, LineChart as LineChartIcon, MapPin, Refr
 import { mockCompetitors, mockInsights, mockScrapeTargets } from '@/data/mockData';
 import { generateChartData } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { InsightCard } from '@/components/dashboard/InsightCard';
+import { SentimentChart } from '@/components/dashboard/SentimentChart';
 
 const CompetitorDetail = () => {
   const { id } = useParams<{ id: string }>();
