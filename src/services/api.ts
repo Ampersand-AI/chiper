@@ -1,4 +1,3 @@
-
 import { Competitor, Insight, ScrapeTarget, ApiSource } from '@/types/competitors';
 
 // This would be replaced with real API calls once connected to a backend
